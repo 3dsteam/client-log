@@ -5,6 +5,13 @@ import {Config, Log, LogLevel, LogType} from './models';
 import {liveQuery} from 'dexie';
 
 interface ClientLogProviderProps {
+    server?: {
+        configUrl?: string
+        logUrl: string
+        // Headers request
+        headers?: { [key: string]: string }
+    }
+    configDefault?: Config
     children: any
 }
 
@@ -12,7 +19,7 @@ interface ClientLogProviderProps {
  * Define components provider
  * @constructor
  */
-export const ClientLogProvider = ({children}: ClientLogProviderProps): ReactElement => {
+export const ClientLogProvider = ({server, configDefault, children}: ClientLogProviderProps): ReactElement => {
 
     // State
     const [ready, setReady] = useState<boolean>(false);
@@ -36,7 +43,7 @@ export const ClientLogProvider = ({children}: ClientLogProviderProps): ReactElem
             default:
                 return prevState;
         }
-    }, {
+    }, configDefault || {
         sync: true,
         timeout: 1000 * 60 * 5,
         logLevel: LogLevel.INFO,
@@ -59,15 +66,19 @@ export const ClientLogProvider = ({children}: ClientLogProviderProps): ReactElem
      * Effettua una chiamata REST per ottenere dal server la lista delle configurazioni
      * e salva la configurazione nel localStorage (key = client-log-config)
      */
-    const pullConfig = async (): Promise<Config | undefined> => {
+    const pullConfig = useCallback(async (): Promise<Config | undefined> => {
+        if (!server?.configUrl) {
+            // Log to console
+            console.debug('%c[CLIENT LOG]: %cServer config not enabled', 'font-weight: bold', 'color: rgb(202 138 4); font-weight: 400');
+            return;
+        }
         try {
             // Make request
-            const res = await fetch('https://572977ec-2b7e-4bcc-a130-74fe47f226fb.mock.pstmn.io/client-log/configs', {
+            const res = await fetch(server?.configUrl, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Client-Id': '',
-                    'Secret': ''
+                    ...(server?.headers || {})
                 }
             });
             // Return config
@@ -83,7 +94,7 @@ export const ClientLogProvider = ({children}: ClientLogProviderProps): ReactElem
             console.error(e);
             console.groupEnd();
         }
-    };
+    }, [server]);
 
     /**
      * Caricamento configurazioni al primo accesso
@@ -105,11 +116,15 @@ export const ClientLogProvider = ({children}: ClientLogProviderProps): ReactElem
     useEffect(() => {
         // Setup PUSH timer
         const pushTimer = setInterval(() => {
+            // Check server config
+            if (!server.logUrl) return;
             // Sync data
-            pushSync(config).then(() => true);
+            pushSync(server.logUrl, config, server?.headers).then(() => true);
         }, config.timeout);
         // Setup PULL timer
         const pullTimer = setInterval(() => {
+            // Check server config
+            if (!server.configUrl) return;
             // Make pull request
             pullConfig().then((config) => {
                 if (config) {
@@ -123,7 +138,7 @@ export const ClientLogProvider = ({children}: ClientLogProviderProps): ReactElem
             clearInterval(pushTimer);
             clearInterval(pullTimer);
         }
-    }, [config]);
+    }, [server, config]);
 
     /**
      * Live sync
@@ -135,13 +150,13 @@ export const ClientLogProvider = ({children}: ClientLogProviderProps): ReactElem
     useEffect(() => {
         // Subscribe to logs
         const liveLogs = liveQuery(() => db.logs.orderBy('timestamp').toArray()).subscribe({
-            next: () => pushSync(config).then(() => true)
+            next: () => pushSync(server?.logUrl, config, server?.headers).then(() => true)
         });
         // Clean subscribes
         return () => {
             liveLogs.unsubscribe();
         }
-    }, [config]);
+    }, [server, config]);
 
     /**
      * Log
@@ -197,7 +212,7 @@ let isInSync: boolean = false;
  * L'operazione di sync non avviene
  * se presente un'altra operazione di sync pendente (isInSync = true)
  */
-const pushSync = async (config: Config) => {
+const pushSync = async (logUrl: string | undefined, config: Config, headers: { [key: string]: string } | undefined) => {
     if (isInSync) return;
 
     // Check if sync is disabled
@@ -206,6 +221,10 @@ const pushSync = async (config: Config) => {
         console.groupCollapsed('%c[CLIENT LOG]: %cSync is disabled', 'font-weight: bold', 'color: rgb(202 138 4); font-weight: 400');
         console.table(config);
         console.groupEnd();
+        return;
+    } else if (!logUrl) {
+        // Log to console
+        console.debug('%c[CLIENT LOG]: %cLog push endpoint is not defined', 'font-weight: bold', 'color: rgb(202 138 4); font-weight: 400');
         return;
     }
 
@@ -243,14 +262,13 @@ const pushSync = async (config: Config) => {
                 new Promise(async (resolve) => {
                     try {
                         // Call REST API
-                        const res = await fetch('https://572977ec-2b7e-4bcc-a130-74fe47f226fb.mock.pstmn.io/client-log', {
+                        const res = await fetch(logUrl, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'Client-Id': '',
-                                'Secret': ''
+                                ...(headers || {})
                             },
-                            body: JSON.stringify(logs)
+                            body: JSON.stringify(logs[0]) // @TODO To fix in production version
                         });
                         // Check if all ok
                         if (res.ok) {
