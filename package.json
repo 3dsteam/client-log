@@ -8,7 +8,7 @@
   "repository": "https://github.com/3dsteam/client-log.git",
   "author": "Lorenzo Bonatti <lorenzo.bonatti@3ds.team>",
   "license": "APACHE LICENSE 2.0",
-  "private": true,
+  "private": false,
   "scripts": {
     "build": "rollup -c"
   },
