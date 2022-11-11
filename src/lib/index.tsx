@@ -94,6 +94,7 @@ export const ClientLogProvider = ({server, configDefault, children}: ClientLogPr
             console.error(e);
             console.groupEnd();
         }
+        return;
     }, [server]);
 
     /**
@@ -117,14 +118,14 @@ export const ClientLogProvider = ({server, configDefault, children}: ClientLogPr
         // Setup PUSH timer
         const pushTimer = setInterval(() => {
             // Check server config
-            if (!server.logUrl) return;
+            if (!server?.logUrl) return;
             // Sync data
             pushSync(server.logUrl, config, server?.headers).then(() => true);
         }, config.timeout);
         // Setup PULL timer
         const pullTimer = setInterval(() => {
             // Check server config
-            if (!server.configUrl) return;
+            if (!server?.configUrl) return;
             // Make pull request
             pullConfig().then((config) => {
                 if (config) {
@@ -315,6 +316,7 @@ const createLog = async (data: Log, type: LogType = LogType.LOG, config: Config)
         default:
             console.warn('CLIENT LOG: Log type not found');
     }
+    return;
 }
 
 /**
