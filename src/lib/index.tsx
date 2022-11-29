@@ -5,12 +5,34 @@ import {Config, Log, LogLevel, LogType} from './models';
 import {liveQuery} from 'dexie';
 
 interface ClientLogProviderProps {
+    /**
+     * Server connection
+     *
+     * If undefined, logs will not be uploaded to the server
+     * They will be saved only on the local DB
+     */
     server?: {
+        /**
+         * Define the REST API URL to download
+         * ClientLog configuration.
+         *
+         * If undefined, the request will be disabled
+         */
         configUrl?: string
+        /**
+         * Define the REST API URL to upload
+         * the saved logs to the server
+         */
         logUrl: string
-        // Headers request
+        /**
+         * Define request headers for the requests
+         * Es. clientId, secret, authorization
+         */
         headers?: { [key: string]: string }
     }
+    /**
+     * Override defaults configuration
+     */
     configDefault?: Config
     children: any
 }
