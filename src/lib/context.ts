@@ -8,5 +8,4 @@ export const ClientLogContext = createContext<ClientLogContextType>({
     log: () => false
 });
 
-// Export components
 export const useClientLogContext = () => useContext(ClientLogContext);

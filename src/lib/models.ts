@@ -35,7 +35,7 @@ export type Log = {
 }
 
 export enum LogLevel {
-    NOTSET = 0,
+    NOT_SET = 0,
     DEBUG = 10,
     INFO = 20,
     WARNING = 30,
@@ -44,9 +44,7 @@ export enum LogLevel {
 }
 
 export enum LogType {
-    CONFIG,
-    LOG,
-    ANALYTICT
+    LOG
 }
 
 export type ClientLogContextType = {
@@ -55,19 +53,80 @@ export type ClientLogContextType = {
 
 export type Config = {
     /**
-     * Indica se effettuare la sync dei dati sul server
+     * Enable server sync
      */
     sync: boolean
     /**
-     * Timeout richiesta di push
+     * Time interval for sync in milliseconds
      */
     timeout: number
     /**
-     * Livello di log da registrare
+     * Min log level to save
      */
     logLevel: LogLevel
     /**
-     * Dimensione massima dei chunk
+     * Chunk size for log list
      */
     chunkSize: number
+}
+
+export type ClientLogSettings = {
+    /**
+     * Default Client log configurations
+     */
+    config?: Config
+    /**
+     * Server settings
+     * for sync configs and logs
+     */
+    server?: {
+        /**
+         * Base url for API requests
+         */
+        baseUrl?: string
+        /**
+         * Define headers for the requests
+         * Ex. { 'Authorization': 'Bearer ...' }
+         */
+        headers?: { [key: string]: string }
+        /**
+         * Settings for sync client log configurations.
+         * View README for defaults info
+         */
+        configSync?: {
+            /**
+             * Enable config sync
+             */
+            enabled?: boolean
+            /**
+             * Endpoint API
+             * This use the fetch api documented into README
+             */
+            api?: string
+            /**
+             * Use custom fetch function
+             */
+            request?: () => Promise<any>
+            /**
+             * Use custom response handler
+             * @param response
+             */
+            parseResponse?: (response: any) => Config
+        }
+        /**
+         * Settings for sync logs.
+         * View README for defaults info
+         */
+        logSync?: {
+            /**
+             * Endpoint API
+             * This use the fetch api documented into README
+             */
+            api?: string
+            /**
+             * Use custom fetch function
+             */
+            request?: (logs: Log[]) => Promise<any>
+        }
+    }
 }
